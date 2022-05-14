@@ -5,9 +5,20 @@ Autor: Carlos Armando De Castro (cadecastro.com)
 """
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 pd.options.mode.chained_assignment = None  # default='warn'
-df=pd.read_csv('https://www.datos.gov.co/api/views/f75u-mirk/rows.csv')
+#Lectura datos suicidios:
+df=pd.read_csv('https://www.datos.gov.co/api/views/f75u-mirk/rows.csv').replace(to_replace={'Archipiélago de San Andrés, Providencia y Santa Catalina':'Archipiélago de San Andrés','Quindío':'Quindio'})
 df['Dia del hecho']=df['Dia del hecho'].str.capitalize()
 df['Mes del hecho']=df['Mes del hecho'].str.capitalize()
+#Lectura datos población:
+pob=pd.read_excel('https://www.dane.gov.co/files/censo2018/proyecciones-de-poblacion/Departamental/anexo-proyecciones-poblacion-departamental_Area2018-2050.xlsx',sheet_name=0,skiprows=11)
+pob=pob[(pob['AÑO']==2019)&(pob['ÁREA GEOGRÁFICA']=='Total')].set_index('DPNOM').drop(columns=['DP','AÑO','ÁREA GEOGRÁFICA']).rename(columns={'Total':'Población 2019'})
+
+#Departamentos:
+deptos=pd.pivot_table(data=df,values='ID',index='Departamento del hecho DANE',aggfunc=np.count_nonzero).rename(columns={'ID':'Suicidios'})
+deptos=deptos.join(pob).dropna()
+deptos['Per capita (%)']=deptos['Suicidios']/deptos['Población 2019']*100
+deptos=deptos.sort_values(by='Per capita (%)',ascending=False)
+del pob
 
 #Edades y sexo:
 edades=pd.pivot_table(data=df,values='ID',index='Grupo de edad de la victima',
@@ -50,26 +61,40 @@ print(' ')
 print(sexo)
 print(' ')
 print('-----------------------------------------')
+print(' ')
+print(deptos)
+print(' ')
+print('-----------------------------------------')
 
 edades.plot.bar(figsize=(12,6),color=['navy','violet'])
 plt.title('Suicidios en Colombia 2016-2019 por edad y género')
+plt.title('cadecastro.com',loc='right',size=8)
 plt.grid(axis='y')
 plt.ylabel('Cantidad de suicidios')
 
 plt.figure(2,figsize=(12,6))
 plt.bar(dias.index,dias['Frecuencia (%)'],color='navy')
 plt.title('Suicidios en Colombia 2016-2019 por día del hecho')
+plt.title('cadecastro.com',loc='right',size=8)
 plt.grid(axis='y')
 plt.ylabel('Frecuencia (%)')
 
 plt.figure(3,figsize=(12,6))
 plt.bar(meses.index,meses['Frecuencia (%)'],color='navy')
 plt.title('Suicidios en Colombia 2016-2019 por mes del hecho')
+plt.title('cadecastro.com',loc='right',size=8)
 plt.grid(axis='y')
 plt.ylabel('Frecuencia (%)')
 
 plt.figure(4,figsize=(6,6))
 plt.pie(sexo['ID'],labels=sexo.index,colors=['navy','violet'])
 plt.title('Suicidios en Colombia por género 2016-2019')
+plt.xlabel('cadecastro.com',size=8)
 
-sexo['ID'].sum()
+plt.figure(5,figsize=(12,6))
+plt.bar(deptos.index,deptos['Per capita (%)'],color='navy')
+plt.title('Suicidios en Colombia 2016-2019 per cápita')
+plt.title('cadecastro.com',loc='right',size=8)
+plt.ylabel('Suicidios/Población (%)')
+plt.xticks(rotation=90,size=10)
+plt.grid(axis='y')
